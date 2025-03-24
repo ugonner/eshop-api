@@ -9,11 +9,17 @@ export class ProductVariant {
   id: string;
 
   @Column({nullable: true})
-  size: string; // e.g., 'S', 'M', 'L', 'XL'
-
+  size: string; 
+  
   @Column({nullable: true})
-  color: string; // e.g., 'Red', 'Blue', 'Black'
-
+  color: string; 
+ 
+  @Column({nullable: true})
+  flavor: string; 
+ 
+  @Column({nullable: true})
+  imageUrl: string; 
+  
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00 })
   price: number;
 

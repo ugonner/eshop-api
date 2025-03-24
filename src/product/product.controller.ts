@@ -71,8 +71,15 @@ export class ProductController {
     return await this.productService.getProducts(payload);
   }
 
+  @Get("tags")
+  async getAllTags(){
+    const res = await this.productService.getTags();
+    return ApiResponse.success("Tags fetched successfully", res);
+  }
+
   @Get(':id')
   async getProduct(@Param('id') id: string) {
-    return await this.productService.getProductById(id);
+    const res = await this.productService.getProductById(id);
+    return ApiResponse.success("product fetched successfully", res);
   }
 }

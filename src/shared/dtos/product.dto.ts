@@ -32,6 +32,17 @@ export class ProductVariantDTO {
     @IsOptional()
     color?: string;
 
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    flavor?: string
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    imageUrl?: string;
+  
+    
     @ApiProperty()
     @IsEnum(ProductVariantType)
     productVariantType: ProductVariantType
@@ -43,6 +54,8 @@ export class ProductVariantDTO {
     @ApiProperty()
     @IsNumber()
     stock: number
+
+
 }
 
 export class ProductDTO {

@@ -95,4 +95,24 @@ export class FileUploadService {
     })
   }
   
+  async deleteFilesLocal(fileUrls: string[]): Promise<boolean> {
+    const fullFilePaths = [];
+    const unlinkPromise = (filename: fs.PathLike) => {
+      return new Promise((resolve, reject) => {
+        fs.unlink(filename, (err) => {
+          if(err) return reject(err);
+          resolve(true);
+        })
+      })
+    };
+
+    await Promise.allSettled(
+      fileUrls.map((fileUrl) => {
+        const attachmentUrl = fileUrl.split("/products/")[1];
+      const filePath = path.join(__dirname, '..', '..', 'public', "products", attachmentUrl);
+      return unlinkPromise(filePath);
+      })
+    );
+    return true;
+  }
 }

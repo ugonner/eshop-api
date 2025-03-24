@@ -1,5 +1,7 @@
 import {
+  Body,
   Controller,
+  Delete,
   HttpStatus,
   Post,
   UploadedFile,
@@ -48,5 +50,17 @@ export class FileUploadController {
     );
 
     return ApiResponse.success('file uploaded successfuly', res);
+  }
+
+  @Delete("multiple")
+  async deleteFiles(@Body() payload: {fileUrls: string[]}){
+    const res = await this.fileUploadService.deleteFilesLocal(payload.fileUrls);
+    return ApiResponse.success("files deleted successfully", res)
+  }
+  
+  @Delete()
+  async deleteFile(@Body() payload: {fileUrl: string}){
+    const res = await this.fileUploadService.deleteFileLocal(payload.fileUrl);
+    return ApiResponse.success("file deleted successfully", res)
   }
 }

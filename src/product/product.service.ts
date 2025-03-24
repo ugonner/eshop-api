@@ -367,4 +367,11 @@ export class ProductService {
     });
   return true;
   }
+
+  
+  async getTags(): Promise<IQueryResult<Tag>> {
+    const qB = this.dataSource.getRepository(Tag).createQueryBuilder("tag");
+    const [data, total] = await qB.getManyAndCount();
+    return {page: 1, limit: 0, total, data}; 
+}
 }

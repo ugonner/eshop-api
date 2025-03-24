@@ -13,9 +13,13 @@ import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
 import { CategoryModule } from './category/category.module';
 import { TransactionModule } from './transaction/transaction.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: path.join(__dirname, "..", "public"),
+    }),
     ConfigModule.forRoot({isGlobal: true}),
     TypeOrmModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({

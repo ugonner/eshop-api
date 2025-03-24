@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { categoryDTO } from '../shared/dtos/category.dto';
 import { Category } from '../entities/category.entity';
+import { IQueryResult } from '../shared/interfaces/api-response.interface';
 
 @Injectable()
 export class CategoryService {
@@ -56,5 +57,10 @@ export class CategoryService {
         }
     }
 
+    async getCategories(): Promise<IQueryResult<Category>> {
+        const qB = this.dataSource.getRepository(Category).createQueryBuilder("category");
+        const [data, total] = await qB.getManyAndCount();
+        return {page: 1, limit: 0, total, data}; 
+    }
     
 }

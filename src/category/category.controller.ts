@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { categoryDTO } from '../shared/dtos/category.dto';
 import { User } from '../shared/guards/decorators/user.decorator';
@@ -34,5 +34,11 @@ export class CategoryController {
         const res = await this.categoryService.updateCategory(categoryId, payload);
         return ApiResponse.success("category created", res);
 
+    }
+
+    @Get()
+    async getCategories(){
+        const res = await this.categoryService.getCategories();
+        return ApiResponse.success("Categories fetched successfully", res);
     }
 }

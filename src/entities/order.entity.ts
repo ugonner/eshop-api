@@ -13,6 +13,7 @@ import { Profile } from './user.entity';
 import { OrderStatus } from '../shared/enums/order.enum';
 import { DeliveryAddressDTO } from '../shared/dtos/order.dto';
 import { PaymentTransaction } from './transaction.entity';
+import { IShippingMethodDetail } from '../shared/DATASETS/shipping/shippingMethods';
 
 @Entity('orders')
 export class Order {
@@ -21,6 +22,9 @@ export class Order {
 
   @Column()
   invoiceNo: string;
+
+  @Column({nullable: true, type: "json"})
+  shippingMethod?: IShippingMethodDetail;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   shippingCost: number;

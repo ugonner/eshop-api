@@ -24,7 +24,11 @@ export class AllExceptionFilter implements ExceptionFilter {
     Logger.error(`Exception caught: ${exception.message}`, {
       stack: exception.stack,
     });
-
+    console.log("Exception Response", exception?.response?.message);
+    let exceptionResponseMessage = ""
+    if(exception?.response?.message){
+      exceptionResponseMessage = (Array.isArray(exception.response.message)) ? exception.response.message[0] : exception.response.message;
+    }
     // Set default error message and status code
     errorMessage =
       'Something went wrong while processing your request. Please contact Admin.';
@@ -42,6 +46,7 @@ export class AllExceptionFilter implements ExceptionFilter {
     } else if (exception instanceof BadRequestException) {
       status = HttpStatus.BAD_REQUEST;
       errorMessage = exception.message;
+      
     } else if (exception instanceof HttpException) {
       status = exception.getStatus() || HttpStatus.FORBIDDEN;
       errorMessage = exception.message || 'Invalid request';
@@ -50,7 +55,7 @@ export class AllExceptionFilter implements ExceptionFilter {
     // Send error response only if headers have not been sent
     if (!response.headersSent) {
       response.status(status).json(
-        ApiResponse.fail(errorMessage, {
+        ApiResponse.fail(`${errorMessage}: ${exceptionResponseMessage}`, {
           status,
           error: exception?.response?.message,
         }),

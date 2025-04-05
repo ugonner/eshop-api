@@ -5,6 +5,7 @@ import {
     IsNumber,
     IsOptional,
     IsPhoneNumber,
+    IsString,
     Length,
   } from 'class-validator';
 import { QueryRequestDTO } from './query-request.dto';
@@ -57,3 +58,14 @@ import { QueryRequestDTO } from './query-request.dto';
 
   export class QueryAuthDTO extends QueryRequestDTO {}
   
+  export class RoleDTO {
+    @ApiProperty()
+    @IsString()
+    name: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    description?: string;
+
+  }

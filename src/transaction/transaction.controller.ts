@@ -38,6 +38,7 @@ export class TransactionController {
                 userId: trx.user?.userId,
                 email: trx.user?.email,
                 amount: trx.amount,
+                paymentRef: trx.paymentRef,
                 currency: PaystackCurrency.NGN,
             };
             const metadata: VerifyPaymentDTO = {
@@ -97,5 +98,13 @@ export class TransactionController {
     ){
         const res = await this.transactionService.updatePayment(payload);
         return ApiResponse.success("Transction updated successfully", res);
+    }
+
+    @Get("/:reference")
+    async getTransaction(
+      @Param("reference") reference: string
+    ){
+      const res = await this.transactionService.getTransaction(reference);
+      return ApiResponse.success("Transaction fetched successfully", res);
     }
 }

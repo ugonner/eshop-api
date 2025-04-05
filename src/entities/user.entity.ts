@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Auth } from "./auth.entity";
 import { Gender } from "../shared/enums/user.enum";
 import { Order } from "./order.entity";
@@ -46,5 +46,11 @@ export class Profile {
 
     @OneToMany(() => PaymentTransaction, (trx) => trx.user)
     paymentTransactions: PaymentTransaction[];
+
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 
 }

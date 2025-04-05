@@ -1,5 +1,5 @@
 import { Logger } from "@nestjs/common";
-import { FindOptionsWhere, QueryRunner, Repository } from "typeorm";
+import { FindOptionsWhere, QueryRunner, Repository, SelectQueryBuilder } from "typeorm";
 
 export class DBUtils{
     static async handleFailedQueryRunner(queryRunner: QueryRunner, error: Error){
@@ -34,4 +34,20 @@ export class DBUtils{
         }
         return new Date(baseDate.getTime() + timeSpan);
     }
+}
+
+export function handleDateQuery<TEntity>(dto: {
+    startDate?: string;
+    endDate?: string;
+    dDate?: string;
+    entityAlias: string
+}, queryBuilder: SelectQueryBuilder<TEntity>, dateField = "createdAt"): SelectQueryBuilder<TEntity>{
+   const {startDate, endDate, dDate, entityAlias} = dto;
+   
+    if(startDate && !endDate) queryBuilder.where(`${entityAlias}.${dateField} >= :startDate`, {startDate});
+    else if(endDate && !startDate) queryBuilder.where(`${entityAlias}.${dateField} <= :endDate`, {endDate});
+    else if(startDate && endDate) queryBuilder.where(`DATE(${entityAlias}.${dateField}) BETWEEN :startDate AND :endDate`, {startDate, endDate});
+    else if(dDate) queryBuilder.where(`DATE(${entityAlias}.${dateField}) = :dDate`, {dDate})
+  
+return queryBuilder;
 }

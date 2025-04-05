@@ -1,7 +1,26 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEnum, IsNumberString, IsOptional, IsString } from "class-validator";
+import { IsDateString, IsEnum, IsNumberString, IsOptional, IsString } from "class-validator";
 
-export class QueryRequestDTO {
+export class QueryDateDTO {
+    
+    @ApiPropertyOptional()
+    @IsDateString()
+    @IsOptional()
+    startDate?: string;
+    @ApiPropertyOptional()
+    @IsDateString()
+    @IsOptional()
+    endDate?: string;
+
+    
+    @ApiPropertyOptional()
+    @IsDateString()
+    @IsOptional()
+    dDate?: string;
+
+}
+
+export class QueryRequestDTO extends QueryDateDTO{
     @ApiPropertyOptional()
     @IsNumberString()
     @IsOptional()
@@ -20,7 +39,4 @@ export class QueryRequestDTO {
     @IsEnum(["ASC", "DESC"], {message: `order must be one of "ASC" | "DESC"`})
     @IsOptional()
     order?: "ASC" | "DESC";
-
-    
-
 }

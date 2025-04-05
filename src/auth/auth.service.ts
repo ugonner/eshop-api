@@ -20,7 +20,8 @@ import { NotificationService } from '../notifiction/notification.service';
 
 import { IQueryResult } from '../shared/interfaces/api-response.interface';
 import { Profile } from '../entities/user.entity';
-import { AuthDTO, OtpAuthDTO, QueryAuthDTO } from '../shared/dtos/auth.dto';
+import { AuthDTO, OtpAuthDTO, QueryAuthDTO, RoleDTO } from '../shared/dtos/auth.dto';
+import { Role } from '../entities/role.entity';
 
 
 @Injectable()
@@ -71,7 +72,7 @@ export class AuthService {
       payload.otp = this.generateOTP();
       const auth = queryRunner.manager.create(Auth, payload);
 
-      await queryRunner.manager.save(Auth, auth);
+      const newAuthUser = await queryRunner.manager.save(Auth, auth);
       
       const profile = queryRunner.manager.create(Profile, {
         userId: auth.userId,
@@ -80,16 +81,13 @@ export class AuthService {
         firstName,
         lastName,
         gender,
-        account: auth,
+        account: newAuthUser,
       });
       
       const newUserProfile = await queryRunner.manager.save(
         Profile,
         profile,
       );
-      auth.profile = newUserProfile;
-      
-      await queryRunner.manager.save(Auth, auth);
       
       await this.notificationService.sendEmail([auth.email], {
         subject: 'Account Creation Activation',
@@ -103,7 +101,7 @@ export class AuthService {
       });
       
       await queryRunner.commitTransaction();
-      newAuth = auth;
+      newAuth = newAuthUser;
     } catch (error) {
       errorData = error;
       await queryRunner.rollbackTransaction();
@@ -127,7 +125,7 @@ export class AuthService {
         { email: dto.email.toLowerCase() },
         { phoneNumber: dto.phoneNumber}
       ],
-      relations: ["profile"]
+      relations: ["role","profile"]
     });
     if (!user) throw new NotFoundException('Invalid credentials');
 
@@ -297,6 +295,80 @@ export class AuthService {
     return 'Password reset done';
   }
 
+  
+  async createRole(dto: RoleDTO): Promise<Role> {
+    let errorData: unknown;
+    let savedRole: Role;
+    const queryRunner = this.dataSource.createQueryRunner();
+    try{
+      await queryRunner.startTransaction();
+      const {name, description} = dto;
+      const roleExists = await queryRunner.manager.findOneBy(Role, {name: name.toLowerCase()});
+      if(roleExists) throw new BadRequestException("Role already exists");
+      const roledata = queryRunner.manager.create(Role, {...dto, name: name.toLowerCase()});
+      const role = await queryRunner.manager.save(Role, roledata);
+      await queryRunner.commitTransaction();
+      savedRole = role;
+    }catch(error){
+      errorData = error;
+      await queryRunner.rollbackTransaction();
+    }finally{
+      await queryRunner.release();
+      if(errorData) throw errorData;
+      return savedRole;
+    }
+  }
+
+  async updateRole(roleId: number, dto: RoleDTO): Promise<Role> {
+    let errorData: unknown;
+    let savedRole: Role;
+    const queryRunner = this.dataSource.createQueryRunner();
+    try{
+      await queryRunner.startTransaction();
+      const roleExists = await queryRunner.manager.findOneBy(Role, {id: roleId});
+      if(!roleExists) throw new BadRequestException("Role not found");
+      const roledata = queryRunner.manager.create(Role, {...roleExists, ...dto});
+      if(dto.name) roledata.name = dto.name.toLowerCase();
+
+      const role = await queryRunner.manager.save(Role, roledata);
+      await queryRunner.commitTransaction();
+      savedRole = role;
+    }catch(error){
+      errorData = error;
+      await queryRunner.rollbackTransaction();
+    }finally{
+      await queryRunner.release();
+      if(errorData) throw errorData;
+      return savedRole;
+    }
+  }
+
+  async assignRole(userId: string, roleId: number): Promise<Auth> {
+    let errorData: unknown;
+    let updatedAuthUser: Auth;
+    const queryRunner = this.dataSource.createQueryRunner();
+    try{
+      await queryRunner.startTransaction();
+      const user = await queryRunner.manager.findOneBy(Auth, {userId});
+      if(!user) throw new NotFoundException("User not found");
+
+      const role = await queryRunner.manager.findOneBy(Role, {id: roleId});
+      if(!role) throw new NotFoundException("Role not found");
+
+      user.role = role;
+      await queryRunner.manager.save(Auth, user);
+      await queryRunner.commitTransaction();
+      updatedAuthUser = user;
+    }catch(error){
+      errorData = error;
+      await queryRunner.rollbackTransaction();
+    }finally{
+      await queryRunner.release();
+      if(errorData) throw errorData;
+      return updatedAuthUser;
+    }
+  }
+  
   async getAuthUsers(dto: QueryAuthDTO): Promise<IQueryResult<Auth>> {
     const {page, limit, searchTerm, order} = dto;
     const queryPage = page ? Number(page) : 1;
@@ -320,4 +392,11 @@ export class AuthService {
   return { page: queryPage, limit: queryLimit, total, data};
   }
   
+  async getUserByEmail(email: string): Promise<Auth> {
+    return await this.dataSource.createQueryRunner().manager.findOneBy(Auth, {email});
+  }
+
+  async getRoles(): Promise<Role[]> {
+    return await this.dataSource.createQueryRunner().manager.findBy(Role, {})
+  }
 }

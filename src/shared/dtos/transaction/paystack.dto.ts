@@ -11,6 +11,9 @@ import { VerifyPaymentDTO } from './payment.dto';
   export class InitiatePaymentDto {
     @IsNumber()
     amount: number;
+
+    @IsString()
+    paymentRef: string;
   
     @IsString()
     userId: string;

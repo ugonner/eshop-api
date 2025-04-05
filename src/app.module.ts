@@ -14,11 +14,13 @@ import { OrderModule } from './order/order.module';
 import { CategoryModule } from './category/category.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
     ServeStaticModule.forRoot({
       rootPath: path.join(__dirname, "..", "public"),
+      exclude: ["/","index.html"]
     }),
     ConfigModule.forRoot({isGlobal: true}),
     TypeOrmModule.forRootAsync({
@@ -63,7 +65,8 @@ import { ServeStaticModule } from '@nestjs/serve-static';
     ProductModule,
     OrderModule,
     CategoryModule,
-    TransactionModule
+    TransactionModule,
+    DashboardModule
 
   ],
   controllers: [AppController],

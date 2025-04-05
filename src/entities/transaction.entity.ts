@@ -8,6 +8,9 @@ export class PaymentTransaction {
     @PrimaryGeneratedColumn('uuid')
       id?: string;
 
+      @Column({nullable: true})
+      paymentRef: string;
+
       @Column()
       paymentMethod: PaymentMethod;
 

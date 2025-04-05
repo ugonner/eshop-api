@@ -6,6 +6,8 @@ import {
   JoinTable,
   ManyToOne,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Tag } from './tag.entity';
 import { Category } from './category.entity';
@@ -32,7 +34,6 @@ export class Product {
   
   @Column({type: "bool", default: false})
   isDeleted?: boolean;
-
 
 
   @Column()
@@ -62,5 +63,11 @@ export class Product {
 
   @OneToMany(() => ProductVariant, (productVariant) => productVariant.product)
   variants: ProductVariant[];
+
+  @CreateDateColumn()
+  createdAt: Date
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 
 }

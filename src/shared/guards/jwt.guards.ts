@@ -21,7 +21,6 @@ export class JwtGuard extends AuthGuard('jwt') {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
     const response = context.switchToHttp().getResponse<Response>();
-
     const tokens = this.extractTokenFromRequest(request);
     // log token and request url
     // If neither access nor refresh token is present, throw UnauthorizedException
@@ -32,8 +31,6 @@ export class JwtGuard extends AuthGuard('jwt') {
     try {
       const secret = process.env.JWT_ACCESS_SECRET;
       const expiresin = process.env.JWT_ACCESS_TOKEN_EXPIRATION;
-      console.log("secret", secret, "expires", expiresin);
-      console.log("token", tokens)
         // Try to verify the access token
         const decodedAccessToken = this.jwtService.verify(tokens.accessToken, {
           secret: process.env.JWT_ACCESS_SECRET

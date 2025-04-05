@@ -5,17 +5,22 @@ import {
   HttpCode,
   HttpStatus,
   Ip,
+  Param,
+  ParseIntPipe,
   Post,
+  Put,
   Query,
   Req,
   UseFilters,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserProfileDTO } from '../shared/dtos/user.dto';
 import { ApiResponse } from '../shared/helpers/apiresponse';
-import { AuthDTO, OtpAuthDTO, QueryAuthDTO } from '../shared/dtos/auth.dto';
+import { AuthDTO, OtpAuthDTO, QueryAuthDTO, RoleDTO } from '../shared/dtos/auth.dto';
 import { ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
 import { AllExceptionFilter } from '../shared/interceptors/all-exceptions.filter';
+import { JwtGuard } from '../shared/guards/jwt.guards';
 
 @ApiTags("Auth")
 @UseFilters(AllExceptionFilter)
@@ -103,6 +108,42 @@ export class AuthController {
     return ApiResponse.success('Successfully sent verification code', user);
   }
 
+  @Post("role")
+  @UseGuards(JwtGuard)
+  async createRole(
+    @Body() payload: RoleDTO
+  ){
+    const res = await this.authService.createRole(payload)
+    return ApiResponse.success("role saved successfully", res);
+  }
+  
+  @Put("role/:roleId")
+  @UseGuards(JwtGuard)
+  async updateRole(
+    @Param("roleId", new ParseIntPipe()) roleId: number,
+    @Body() payload: RoleDTO
+  ){
+    const res = await this.authService.updateRole(roleId, payload)
+    return ApiResponse.success("role saved successfully", res);
+  }
+
+
+  @Post("assign-role/:roleId")
+  @UseGuards(JwtGuard)
+  async assignRole(
+    @Body() payload: {id: string},
+    @Param("roleId", new ParseIntPipe()) roleId: number
+  ){
+    const res = await this.authService.assignRole(payload.id, roleId);
+    return ApiResponse.success("user updated", res);
+  }
+
+  
+  @Get("role")
+  async getRoles(){
+    const res = await this.authService.getRoles()
+    return ApiResponse.success("roles fetched successfully", res);
+  }
 
   @Get()
   async getAuthUsers(
@@ -111,4 +152,6 @@ export class AuthController {
     const res = await this.authService.getAuthUsers(payload);
     return ApiResponse.success("Users fetched successfully", res);
   }
+
+
 }

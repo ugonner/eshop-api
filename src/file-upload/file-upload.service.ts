@@ -83,7 +83,8 @@ export class FileUploadService {
   }
 
   async deleteFileLocal(fileUrl: string) {
-    const filePath = fileUrl.replace(`${process.env.BASE_URL}`, "");
+    if(!fileUrl) return;
+    const filePath = fileUrl?.replace(`${process.env.BASE_URL}`, "");
     const fullPath = path.join(__dirname, '..', '..', 'public', filePath);
     const fileExists = fs.existsSync(fullPath);
     if(!fileExists) return;

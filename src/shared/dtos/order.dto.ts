@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEnum, IsNumber, IsNumberString, IsOptional, IsString, ValidateNested } from "class-validator";
-import { OrderOrderFields, OrderStatus } from "../enums/order.enum";
+import { IsEmail, IsEnum, IsNumber, IsNumberString, IsOptional, IsString, ValidateNested } from "class-validator";
+import { OrderOrderFields, OrderShippingMethodType, OrderStatus } from "../enums/order.enum";
+import { QueryRequestDTO } from "./query-request.dto";
 
 export class DeliveryAddressDTO {
     @ApiPropertyOptional()
@@ -39,12 +40,29 @@ export class OrderItemDTO {
     @IsNumber()
     quantity: number;
 }
+
+export class OrderProfileDTO {
+    @ApiProperty()
+    @IsEmail()
+    email: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    userName?: string;
+}
+
 export class OrderDTO {
     @ApiPropertyOptional()
       @IsNumber()
       @IsOptional()
       shippingCost: number;
-      
+    
+      @ApiPropertyOptional()
+      @IsEnum(OrderShippingMethodType)
+      @IsOptional()
+      shippingMethodType: OrderShippingMethodType;
+
       @ApiPropertyOptional()
       @IsString()
       @IsOptional()
@@ -53,12 +71,21 @@ export class OrderDTO {
     @ApiProperty()
     @ValidateNested()
     @Type(() => DeliveryAddressDTO)
-    deliveryAddress: DeliveryAddressDTO;
+    @IsOptional()
+    deliveryAddress?: DeliveryAddressDTO;
 
     @ApiProperty()
     @ValidateNested({each: true})
     @Type(() => OrderItemDTO)
     items: OrderItemDTO[];
+}
+
+export class OrderWithOrderProfileDTO extends OrderDTO {
+
+    @ApiPropertyOptional()
+    @ValidateNested()
+    @Type(() => OrderProfileDTO)
+    orderProfile: OrderProfileDTO
 }
 
 export class OrderStatusDTO {
@@ -69,11 +96,16 @@ export class OrderStatusDTO {
 }
 
 
-export class QueryOrderDTO {
+export class QueryOrderDTO extends QueryRequestDTO{
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   name: string;
+
+  @ApiPropertyOptional()
+  @IsEnum(OrderStatus)
+  @IsOptional()
+  orderStatus: OrderStatus;
 
   @ApiPropertyOptional()
   @IsNumberString()
@@ -84,28 +116,6 @@ export class QueryOrderDTO {
   @IsNumberString()
   @IsOptional()
   minPrice: string;
-
-
-
- @ApiPropertyOptional()
- @IsString()
- @IsOptional()
- searchTerm?: string;
-
- @ApiPropertyOptional()
- @IsNumberString()
- @IsOptional()
- page?: string;
-
- @ApiPropertyOptional()
- @IsNumberString()
- @IsOptional()
- limit?: string;
-
- @ApiPropertyOptional()
- @IsEnum(["ASC" , "DESC"], {message: `order must be one of "ASC" | "DESC"`})
- @IsOptional()
- order: "ASC" | "DESC";
 
  @ApiPropertyOptional()
  @IsEnum(OrderOrderFields)

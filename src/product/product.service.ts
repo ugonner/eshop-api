@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
@@ -10,10 +14,13 @@ import {
 import { Product } from '../entities/product.entity';
 import { ProductVariant } from '../entities/product-variant.entity';
 import {
+  GetVariantsDTO,
   ProductDTO,
   ProductStatusDTO,
+  ProductVariantDTO,
   QueryProductDTO,
   TagDTO,
+  UpdateProductVariantStatusDTO,
 } from '../shared/dtos/product.dto';
 import { Category } from '../entities/category.entity';
 import { Tag } from '../entities/tag.entity';
@@ -23,6 +30,7 @@ import { FileUploadService } from '../file-upload/file-upload.service';
 import { IQueryResult } from '../shared/interfaces/api-response.interface';
 import { OrderItemDTO } from '../shared/dtos/order.dto';
 import { OrderItem } from '../entities/orderitem.entity';
+import { handleDateQuery } from '../shared/helpers/db';
 
 @Injectable()
 export class ProductService {
@@ -69,11 +77,36 @@ export class ProductService {
     return [...existingTags, ...createdTags];
   }
 
+  private collateResidualFiles(
+    dto: ProductDTO,
+    product?: Product,
+  ): { prevFiles: string[]; newFiles: string[] } {
+    let prevFiles = [];
+    let newFiles = [];
+
+    if (product?.imageUrl !== dto?.imageUrl) prevFiles.push(product?.imageUrl);
+    newFiles.push(dto?.imageUrl);
+
+    dto.variants.forEach((variant) => {
+      if (product && product.variants) {
+        const prevVariant = product.variants.find(
+          (prevVariant) => prevVariant.id === variant.id,
+        );
+        if (prevVariant?.imageUrl !== variant?.imageUrl) {
+          prevFiles.push(prevVariant?.imageUrl);
+        }
+      }
+      newFiles.push(variant?.imageUrl);
+    });
+    return { prevFiles, newFiles };
+  }
+
   async createProduct(dto: ProductDTO, userId: string): Promise<Product> {
     let newProduct: Product;
     let errorData: unknown;
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
+    const { prevFiles, newFiles } = this.collateResidualFiles(dto);
 
     try {
       const { categories, variants, tags, ...productDto } = dto;
@@ -111,17 +144,9 @@ export class ProductService {
 
       if (variants) {
         console.log('in variants SECTION');
-        const productVariants = await Promise.all(
-          variants.map((variant) =>
-            this.prepareProductVariants(
-              prdt,
-              variant as ProductVariant,
-              queryRunner,
-            ),
-          ),
-        );
-        //product.variants = productVariants.filter((variant) => Boolean(variant) );
+        await this.validateAndCreateVariants(variants, product, queryRunner);
       }
+
       await queryRunner.commitTransaction();
       newProduct = prdt;
     } catch (error) {
@@ -151,6 +176,9 @@ export class ProductService {
       categories,
       tags,
       searchTerm,
+      startDate,
+      endDate,
+      dDate,
       order,
       orderBy,
       page,
@@ -160,21 +188,30 @@ export class ProductService {
     const queryPage = page ? Number(page) : 1;
     const queryLimit = limit ? Number(limit) : 10;
     const queryOrder = order ? order.toUpperCase() : 'DESC';
-    const queryOrderBy = orderBy ? orderBy : 'id';
+    const queryOrderBy = orderBy ? orderBy : 'createdAt';
 
-    const queryBuilder = this.getQueryBuilder();
+    let queryBuilder = this.getQueryBuilder();
 
     if (queryFields) {
       Object.keys(queryFields).forEach((field) => {
         queryBuilder.andWhere(`product.${field} = :value`, {
-          value: queryFields[field]
+          value: queryFields[field],
         });
-      })
+      });
     }
 
-    if(minPrice) queryBuilder.andWhere(`variants.price >= :minPrice`, {minPrice})
-    if(maxPrice) queryBuilder.andWhere(`variants.price <=  :maxPrice`, {maxPrice});
-    
+    if (startDate || endDate || dDate) {
+      queryBuilder = handleDateQuery<Product>(
+        { startDate, endDate, dDate, entityAlias: 'product' },
+        queryBuilder,
+        'createdAt',
+      );
+    }
+
+    if (minPrice)
+      queryBuilder.andWhere(`variants.price >= :minPrice`, { minPrice });
+    if (maxPrice)
+      queryBuilder.andWhere(`variants.price <=  :maxPrice`, { maxPrice });
 
     if (searchTerm) {
       const searchFields = ['name', 'description', 'imageUrl'];
@@ -186,6 +223,8 @@ export class ProductService {
         searchTerm: `%${searchTerm.toLowerCase().trim()}%`,
       });
     }
+
+    //queryBuilder.andWhere(`product.isDeleted = :isDeleted`, {isDeleted: true})
 
     const [data, total] = await queryBuilder
       .orderBy(`product.${queryOrderBy}`, queryOrder as 'ASC' | 'DESC')
@@ -226,6 +265,7 @@ export class ProductService {
     const variantExists = await queryRunner.manager.findOneBy(ProductVariant, {
       size: variant.size,
       color: variant.color,
+      flavor: variant.flavor,
       productVariantType: variant.productVariantType,
       product: { id: product.id },
     });
@@ -242,12 +282,53 @@ export class ProductService {
     return;
   }
 
+  async validateAndCreateVariants(
+    variants: ProductVariantDTO[],
+    product: Product,
+    queryRunner: QueryRunner,
+  ): Promise<ProductVariant[]> {
+    let productVariants: ProductVariant[] = [];
+    if (product?.variants) productVariants = product.variants;
+    else
+      productVariants = await queryRunner.manager.find(ProductVariant, {
+        where: {
+          product: { id: product.id },
+        },
+      });
+    const validVariants: ProductVariant[] = [];
+    variants.forEach((variantDto) => {
+      const variant = queryRunner.manager.create(ProductVariant, variantDto);
+      (variant as ProductVariant).product = product;
+      (variant as any).productId = product.id;
+      if (variantDto.id) {
+        const variantExists = productVariants.find(
+          (pVariant) => pVariant.id === variant.id,
+        );
+        if (variantExists) validVariants.push(variant as ProductVariant);
+      } else {
+        const variantExists = productVariants.find(
+          (pVariant) =>
+            pVariant.size === variant.size &&
+            pVariant.color === variant.color &&
+            pVariant.flavor === variant.flavor,
+        );
+        if (!variantExists) validVariants.push(variant as ProductVariant);
+      }
+    });
+    console.log('varinats length', validVariants.length);
+    await queryRunner.manager.save(ProductVariant, validVariants);
+    return validVariants;
+  }
+
   async updateProduct(productId: string, dto: ProductDTO): Promise<Product> {
     let updatedProduct: Product;
     let errorData: unknown;
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
+    let prevFiles = [];
+    let newFiles = [];
     try {
+      //console.log("dto", dto);
       const {
         categories,
         tags,
@@ -258,18 +339,20 @@ export class ProductService {
       } = dto;
       const productExists = await queryRunner.manager.findOne(Product, {
         where: { id: productId },
-        relations: ['variants', 'tags', 'categories'],
+        relations: ['tags', 'categories', 'variants'],
       });
       if (!productExists) {
         throw new NotFoundException(`Product with ID ${productId} not found`);
       }
 
+      const staleFiles = this.collateResidualFiles(dto, productExists);
+      prevFiles = staleFiles.prevFiles;
+      newFiles = staleFiles.newFiles;
+
       const product = { ...productExists, ...productDto };
 
-      const prevFiles = [];
       if (imageUrl) {
         product.imageUrl = imageUrl;
-        prevFiles.push(product.imageUrl);
       }
       if (attachments) {
         product.attachments = [...(product.attachments || []), ...attachments];
@@ -289,39 +372,40 @@ export class ProductService {
         },
         [],
       );
-      product.categories = [
-        ...(product.categories || []),
-        ...validatedCategories,
-      ];
+      product.categories = [...validatedCategories];
 
       const productTags = await this.createOrValidateProductTags(
         product,
         tags,
         queryRunner,
       );
-      product.tags = [...(product.tags || []), ...(productTags || [])];
+      product.tags = [...(productTags || [])];
 
       // Handling Variants
       if (variants) {
-        const productVariants = await Promise.all(
-          variants.map((variant) =>
-            this.prepareProductVariants(
-              product,
-              variant as ProductVariant,
-              queryRunner,
-            ),
-          ),
+        const validVariants = await this.validateAndCreateVariants(
+          variants,
+          productExists,
+          queryRunner,
         );
+        console.log('valid varinats', validVariants);
+        product.variants = validVariants;
         //product.variants = productVariants.filter((variant) => Boolean(variant) );
       }
 
       const prdt = await queryRunner.manager.save(Product, product);
       await queryRunner.commitTransaction();
 
-      Promise.all(
-        prevFiles.map((file) => this.fileUploadService.deleteFileLocal(file)),
-      );
       updatedProduct = prdt;
+      Promise.allSettled(
+        prevFiles.map((file) => this.fileUploadService.deleteFileLocal(file)),
+      ).then((res) =>
+        console.log(
+          ...res.map((resValue) =>
+            resValue.status === 'rejected' ? resValue.reason : null,
+          ),
+        ),
+      );
     } catch (error) {
       errorData = error;
       await queryRunner.rollbackTransaction();
@@ -358,20 +442,59 @@ export class ProductService {
     }
   }
 
-  async validateProductInStock(items: OrderItem[], queryRunner: QueryRunner): Promise<boolean> {
-    
-    if(items.length === 0) throw new BadRequestException("No order items provided");
+  async validateProductInStock(
+    items: OrderItem[],
+    queryRunner: QueryRunner,
+  ): Promise<boolean> {
+    if (items.length === 0)
+      throw new BadRequestException('No order items provided');
     items.forEach((item) => {
       const variant = item.productVariant;
-      if(Number(variant.stock) < Number(item.quantity)) throw new BadRequestException(`Product Out of Stock: ${variant.product?.name} with specs: size: ${variant.size} | color: ${variant.color} | Available stock: ${variant.stock}`)
+      if (Number(variant.stock) < Number(item.quantity))
+        throw new BadRequestException(
+          `Product Out of Stock: ${variant.product?.name} with specs: size: ${variant.size} | color: ${variant.color} | Available stock: ${variant.stock}`,
+        );
     });
-  return true;
+    return true;
   }
 
-  
   async getTags(): Promise<IQueryResult<Tag>> {
-    const qB = this.dataSource.getRepository(Tag).createQueryBuilder("tag");
+    const qB = this.dataSource.getRepository(Tag).createQueryBuilder('tag');
     const [data, total] = await qB.getManyAndCount();
-    return {page: 1, limit: 0, total, data}; 
-}
+    return { page: 1, limit: 0, total, data };
+  }
+
+  async getVariants(dto: GetVariantsDTO): Promise<ProductVariant[]> {
+    return await this.dataSource
+      .createQueryRunner()
+      .manager.find(ProductVariant, {
+        where: { id: In(dto.variantIds) },
+        relations: ['product'],
+      });
+  }
+
+  async deleteVariant(variantId: string, dto: UpdateProductVariantStatusDTO) {
+    let errorData: unknown;
+    let variant: ProductVariant;
+    const queryRunner = this.dataSource.createQueryRunner();
+    try {
+      await queryRunner.startTransaction();
+      const variantExists = await queryRunner.manager.findOneBy(
+        ProductVariant,
+        { id: variantId },
+      );
+      if (!variantExists) throw new NotFoundException('Variant not found');
+      const variantData = { ...variantExists, ...dto };
+      await queryRunner.manager.save(ProductVariant, variantData);
+      await queryRunner.commitTransaction();
+      variant = variantExists;
+    } catch (error) {
+      errorData = error;
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
+      if (errorData) throw errorData;
+      return variant;
+    }
+  }
 }

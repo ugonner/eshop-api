@@ -31,27 +31,19 @@ export class PaystackService {
     });
   }
 
-  private generateReference() {
-    const input = `${uuidv4()}-${Date.now()}`;
-    return crypto
-      .createHash('sha256')
-      .update(input)
-      .digest('hex')
-      .substr(0, 12);
-  }
 
   async initiatePayment(
     payload: InitiatePaymentDto,
     metadata?: VerifyPaymentDTO, // Optional metadata
   ): Promise<PaystackInitiatePaymentResponseDto> {
     try {
-      let callback_page = `order`;
+      let callback_page = `/order/verify-payment`;
       
       const body = {
         ...payload,
         amount: payload.amount * 100, // Convert to kobo for NGN
         callback_url: `${process.env.APP_URL}${callback_page}`,
-        reference: this.generateReference(),
+        reference: payload.paymentRef,
         metadata,
       };
       const response = await this.axiosInstance.post(

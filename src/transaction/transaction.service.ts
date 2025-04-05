@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, QueryRunner } from 'typeorm';
+import { DataSource, QueryRunner, Transaction } from 'typeorm';
 import { PaymentDTO, VerifyPaymentDTO } from '../shared/dtos/transaction/payment.dto';
 import { PaymentTransaction } from '../entities/transaction.entity';
 import { Profile } from '../entities/user.entity';
@@ -10,13 +10,24 @@ import { OrderItemDTO } from '../shared/dtos/order.dto';
 import { ProductVariant } from '../entities/product-variant.entity';
 import { OrderStatus } from '../shared/enums/order.enum';
 import { ProductService } from '../product/product.service';
+import * as crypto from "crypto";
 
+import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class TransactionService {
     constructor(
         @InjectDataSource() private dataSource: DataSource,
         private productService: ProductService
     ){}
+
+  private generateReference() {
+    const input = `${uuidv4()}-${Date.now()}`;
+    return crypto
+      .createHash('sha256')
+      .update(input)
+      .digest('hex')
+      .substr(0, 12);
+  }
 
     async createTransaction(dto: PaymentDTO, userId: string): Promise<PaymentTransaction> {
         let transaction: PaymentTransaction;
@@ -41,8 +52,10 @@ export class TransactionService {
             const trxData = queryRunner.manager.create(PaymentTransaction, transactionDto);
             trxData.paymentStatus = PaymentStatus.PENDING;
             trxData.amount = Number(order.totalAmount) + Number(order.shippingCost || 0);
+            trxData.paymentRef = this.generateReference();
             trxData.order = order;
             trxData.user = user;
+            
             const trx = await queryRunner.manager.save(PaymentTransaction, trxData);
             await queryRunner.commitTransaction();
             transaction = trx;
@@ -101,5 +114,15 @@ export class TransactionService {
         variant.stock = operator === "add" ? (Number(variant.stock) + Number(item.quantity)) : (Number(variant.stock) - Number(item.quantity));
         const vrt = await queryRunner.manager.save(ProductVariant, variant);
         return vrt;
+    }
+
+    async getTransaction(idOrReference: string): Promise<PaymentTransaction> {
+        return await this.dataSource.createQueryRunner().manager.findOne(PaymentTransaction, {
+            where: [
+                {paymentRef: idOrReference},
+                {id: idOrReference}
+            ],
+            relations: ["order"]
+        });
     }
 }

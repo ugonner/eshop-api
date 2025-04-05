@@ -4,6 +4,7 @@ import { IAttachment } from "../interfaces/typings";
 import { Type } from "class-transformer";
 import { ProductOrderFields, ProductVariantType } from "../enums/product.enum";
 import { categoryDTO } from "./category.dto";
+import { QueryRequestDTO } from "./query-request.dto";
 
 export class TagDTO {
     @ApiPropertyOptional()
@@ -59,6 +60,8 @@ export class ProductVariantDTO {
 }
 
 export class ProductDTO {
+
+  
 @ApiProperty()
 @IsString()
  name: string;
@@ -104,9 +107,14 @@ export class ProductStatusDTO {
   @IsBoolean()
   @IsOptional()
   isPublished: boolean;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  isDeleted: boolean;
 }
 
-export class QueryProductDTO {
+export class QueryProductDTO extends QueryRequestDTO{
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
@@ -123,40 +131,32 @@ export class QueryProductDTO {
 
 
   @ApiPropertyOptional()
-  @IsString({each: true})
- @IsArray()
-@IsOptional()
-categories: string[];
+  @IsString()
+  @IsOptional()
+categories: string;
+
 @ApiPropertyOptional()
-@IsString({each: true})
-@IsArray()
-@IsOptional()
-tags: string[];
+  @IsString()
+  @IsOptional()
+tags: string;
 
- @ApiPropertyOptional()
- @IsString()
- @IsOptional()
- searchTerm?: string;
-
- @ApiPropertyOptional()
- @IsNumberString()
- @IsOptional()
- page?: string;
-
- @ApiPropertyOptional()
- @IsNumberString()
- @IsOptional()
- limit?: string;
-
- @ApiPropertyOptional()
- @IsEnum(["ASC" , "DESC"], {message: `order must be one of "ASC" | "DESC"`})
- @IsOptional()
- order: "ASC" | "DESC";
-
- @ApiPropertyOptional()
+@ApiPropertyOptional()
  @IsEnum(ProductOrderFields)
  @IsOptional()
  orderBy: ProductOrderFields;
 
 
+}
+
+export class GetVariantsDTO {
+  @ApiProperty()
+  @IsString({each: true})
+  variantIds: string[]
+}
+
+export class UpdateProductVariantStatusDTO {
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  isDeleted?: boolean;
 }

@@ -10,8 +10,31 @@ import { IAttachment } from '../shared/interfaces/typings';
 
 @Injectable()
 export class FileUploadService {
+
   private awsS3Bucket = process.env.AWS_BUCKET || 'ugonnatalk';
 
+  private cloudinaryService = v2; 
+
+  constructor(){
+    const cloudinaryApiKey =
+      process.env.NODE_ENV === 'production'
+        ? process.env.CLOUDINARY_API_KEY
+        : process.env.CLOUDINARY_API_KEY;
+    const cloudinaryApiKeySecret =
+      process.env.NODE_ENV === 'production'
+        ? process.env.CLOUDINARY_API_SECRET
+        : process.env.CLOUDINARY_API_SECRET;
+
+    const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const awsRegion = process.env.AWS_REGION || 'eu-north-1';
+    const cloudinaryV2 = v2;
+    this.cloudinaryService.config({
+      api_key: cloudinaryApiKey,
+      api_secret: cloudinaryApiKeySecret,
+      cloud_name: cloudinaryCloudName
+    });
+    
+  }
   async uploadMessageAttachmentToLocal(file: Express.Multer.File): Promise<IAttachment> {
     console.log("file name", file.originalname);
     //const fileExtension = file.originalname.split(".")[-1];
@@ -35,23 +58,6 @@ export class FileUploadService {
 
   async uploadMessageAttachmentToCloudinary(file: Express.Multer.File): Promise<IAttachment> {
     
-    const cloudinaryApiKey =
-      process.env.NODE_ENV === 'production'
-        ? process.env.CLOUDINARY_API_KEY
-        : process.env.CLOUDINARY_API_KEY;
-    const cloudinaryApiKeySecret =
-      process.env.NODE_ENV === 'production'
-        ? process.env.CLOUDINARY_API_SECRET
-        : process.env.CLOUDINARY_API_SECRET;
-
-    const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const awsRegion = process.env.AWS_REGION || 'eu-north-1';
-    const cloudinaryV2 = v2;
-    cloudinaryV2.config({
-      api_key: cloudinaryApiKey,
-      api_secret: cloudinaryApiKeySecret,
-      cloud_name: cloudinaryCloudName
-    });
     
 
     const fileStream = toStream(file.buffer);
@@ -60,7 +66,7 @@ export class FileUploadService {
     const key = `${Date.now()}-${attachmentType}.${fileExtension}`;
 
     const uploadStreamPromise: UploadApiResponse = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinaryV2.uploader.upload_stream({
+      const uploadStream = this.cloudinaryService.uploader.upload_stream({
         resource_type: "auto"
       }, (err, result) => {
         if(err) reject(err);
@@ -70,20 +76,22 @@ export class FileUploadService {
     });
     return {
       attachmentType,
-      attachmentUrl: uploadStreamPromise.secure_url
+      attachmentUrl: uploadStreamPromise.secure_url || uploadStreamPromise.url 
     }
+}
 
-    
-
-    const attachmentUrl = `https://${this.awsS3Bucket}.s3.${awsRegion}.amazonaws.com/${key}`;
-    return {
-      attachmentType: file.mimetype as any,
-      attachmentUrl,
-    };
+  async deletEeFileCloudinary(fileUrl: string) {
+    if(!fileUrl) return;
+    const fileName = fileUrl.split("/").pop();
+    const publicId = fileName ? fileName.split(".")[0] : null;
+    if(!publicId) return;
+    return await this.cloudinaryService.uploader.destroy(publicId);
   }
-
+  
   async deleteFileLocal(fileUrl: string) {
     if(!fileUrl) return;
+    if(process.env.NODE_ENV === "production") return this.deletEeFileCloudinary(fileUrl); 
+
     const filePath = fileUrl?.replace(`${process.env.BASE_URL}`, "");
     const fullPath = path.join(__dirname, '..', '..', 'public', filePath);
     const fileExists = fs.existsSync(fullPath);

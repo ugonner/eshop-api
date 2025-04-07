@@ -5,6 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { HttpsOptions } from '@nestjs/common/interfaces/external/https-options.interface';
+import { OpenAPIConfiguration } from './documentation';
 import { AllExceptionFilter } from './shared/interceptors/all-exceptions.filter';
 
 
@@ -25,6 +26,7 @@ async function bootstrap() {
   //app.useGlobalFilters(new AllExceptionFilt
   
   //app.useGlobalFilters(new AllExceptionFilter())
+  OpenAPIConfiguration.configureSwagger(app);
 const port = process.env.PORT || 8000;
   await app.listen(port, "0.0.0.0", () => console.log("Server RUnning on port", port ));
 }

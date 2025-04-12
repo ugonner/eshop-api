@@ -41,4 +41,14 @@ export class CategoryController {
         const res = await this.categoryService.getCategories();
         return ApiResponse.success("Categories fetched successfully", res);
     }
+    
+
+    @Get(":id")
+    async getCategory(
+        @Param("id") categoryId: string
+    ){
+        const res = await this.categoryService.getCategory(categoryId);
+        return ApiResponse.success("Category fetched successfully", res);
+    }
+    
 }

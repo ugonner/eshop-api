@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { categoryDTO } from '../shared/dtos/category.dto';
 import { Category } from '../entities/category.entity';
 import { IQueryResult } from '../shared/interfaces/api-response.interface';
+import { Product } from '../entities/product.entity';
 
 @Injectable()
 export class CategoryService {
@@ -61,6 +62,19 @@ export class CategoryService {
         const qB = this.dataSource.getRepository(Category).createQueryBuilder("category");
         const [data, total] = await qB.getManyAndCount();
         return {page: 1, limit: 0, total, data}; 
+    }
+
+    async getCategory(categoryId: string): Promise<Category> {
+        const products = await this.dataSource.createQueryRunner().manager.find(Product, {
+            where: {categories: {id: categoryId}},
+            relations: ["variants"],
+            skip: 0,
+            take: 12,
+            order: {createdAt: "DESC"}
+        });
+        const category = await this.dataSource.createQueryRunner().manager.findOneBy(Category, {id: categoryId});
+        category.products = products;
+        return category;
     }
     
 }

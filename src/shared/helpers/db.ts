@@ -44,10 +44,10 @@ export function handleDateQuery<TEntity>(dto: {
 }, queryBuilder: SelectQueryBuilder<TEntity>, dateField = "createdAt"): SelectQueryBuilder<TEntity>{
    const {startDate, endDate, dDate, entityAlias} = dto;
    
-    if(startDate && !endDate) queryBuilder.where(`${entityAlias}.${dateField} >= :startDate`, {startDate});
-    else if(endDate && !startDate) queryBuilder.where(`${entityAlias}.${dateField} <= :endDate`, {endDate});
-    else if(startDate && endDate) queryBuilder.where(`DATE(${entityAlias}.${dateField}) BETWEEN :startDate AND :endDate`, {startDate, endDate});
-    else if(dDate) queryBuilder.where(`DATE(${entityAlias}.${dateField}) = :dDate`, {dDate})
+    if(startDate && !endDate) queryBuilder.andWhere(`${entityAlias}.${dateField} >= :startDate`, {startDate});
+    else if(endDate && !startDate) queryBuilder.andWhere(`${entityAlias}.${dateField} <= :endDate`, {endDate});
+    else if(startDate && endDate) queryBuilder.andWhere(`DATE(${entityAlias}.${dateField}) BETWEEN :startDate AND :endDate`, {startDate, endDate});
+    else if(dDate) queryBuilder.andWhere(`DATE(${entityAlias}.${dateField}) = :dDate`, {dDate})
   
 return queryBuilder;
 }

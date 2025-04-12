@@ -191,6 +191,7 @@ export class ProductService {
     const queryOrderBy = orderBy ? orderBy : 'createdAt';
 
     let queryBuilder = this.getQueryBuilder();
+    queryBuilder.where("product.isDeleted != :isDeleted", {isDeleted: true});
 
     if (queryFields) {
       Object.keys(queryFields).forEach((field) => {
@@ -206,6 +207,15 @@ export class ProductService {
         queryBuilder,
         'createdAt',
       );
+    }
+
+    if(categories){
+      const categoryArr = categories.split(",");
+      queryBuilder.andWhere("categories.id IN (:...categoryArr)", {categoryArr})
+    }
+    if(tags){
+      const tagArr = tags.split(",");
+      queryBuilder.andWhere("tags.id IN (:...tagArr)", {tagArr})
     }
 
     if (minPrice)
@@ -235,51 +245,14 @@ export class ProductService {
     return { page: queryPage, limit: queryLimit, total, data };
   }
 
-  async getProductById(productId: string): Promise<Product> {
+  async getProductById(productIdOrSlug: string): Promise<Product> {
     return await this.dataSource.createQueryRunner().manager.findOne(Product, {
-      where: { id: productId },
+      where: [
+        { id: productIdOrSlug },
+        {name: productIdOrSlug.replace("___", " ")}
+      ],
       relations: ['variants', 'tags', 'categories'],
     });
-  }
-
-  async prepareProductVariants(
-    product: Product,
-    variant: ProductVariant,
-    queryRunner: QueryRunner,
-  ): Promise<ProductVariant | null> {
-    let updatedVariant: ProductVariant;
-    if (variant.id) {
-      const variantExists = await queryRunner.manager.findOneBy(
-        ProductVariant,
-        { id: variant.id, product: { id: product.id } },
-      );
-      if (variantExists) {
-        const variantData = { ...variantExists, ...variant, product };
-        const updatedVariant = await queryRunner.manager.save(
-          ProductVariant,
-          variantData,
-        );
-        return updatedVariant;
-      }
-    }
-    const variantExists = await queryRunner.manager.findOneBy(ProductVariant, {
-      size: variant.size,
-      color: variant.color,
-      flavor: variant.flavor,
-      productVariantType: variant.productVariantType,
-      product: { id: product.id },
-    });
-
-    if (!variantExists) {
-      const variantData = queryRunner.manager.create(ProductVariant, variant);
-      variantData.product = product;
-      const updatedVariant = await queryRunner.manager.save(
-        ProductVariant,
-        variantData,
-      );
-      return updatedVariant;
-    }
-    return;
   }
 
   async validateAndCreateVariants(

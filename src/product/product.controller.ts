@@ -6,6 +6,7 @@ import { User } from '../shared/guards/decorators/user.decorator';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiResponse } from '../shared/helpers/apiresponse';
 import { FileUploadService } from '../file-upload/file-upload.service';
+import { Product } from '../entities/product.entity';
 
 @ApiTags("product")
 @Controller('product')
@@ -87,6 +88,21 @@ export class ProductController {
     const res = await this.productService.getTags();
     return ApiResponse.success("Tags fetched successfully", res);
   }
+
+  @Get("product-page/:productIdOrSlug")
+  async getProductPageBySlug(
+    @Param("productIdOrSlug") productIdOrSlug: string
+  ){
+    
+    const product = await this.productService.getProductById(productIdOrSlug);
+    let relatedProducts: Product[] = [];
+    if(product){
+      relatedProducts = (await this.productService.getProducts({tags: product.tags.map((tag) => tag.id).join(",")} as QueryProductDTO)).data
+    }
+    
+    return ApiResponse.success("Product page data fetched successfully", {product, products: relatedProducts})
+  }
+
 
 
   @Get(':id')

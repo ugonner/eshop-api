@@ -13,7 +13,8 @@ const typeOrmConfig = {
     database: process.env.DATABASE_NAME,
     autoLoadEntities: true,
     entities: ["dist/**/*.entity.js"],
-    migrations: ["dist/migrations/**/*.js"],
+    migrations: ["src/migrations/**/*.js"],
+    migrationsDir: "src/migrations",
     //"subscribers": ["dist/subscribesr/**/*.js"],
     cli: {
       entitiesDir: "src/entities",

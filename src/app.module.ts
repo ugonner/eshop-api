@@ -27,7 +27,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
       useFactory: (configService: ConfigService) => ({
         type: "mysql",
         host: process.env.DATABASE_HOST,
-        port: Number(process.env.DATABASE_PORT),
         username: process.env.DATABASE_USER,
         password: process.env.NODE_ENV === "development" ? null : process.env.DATABASE_PASSWORD,
         database: process.env.DATABASE_NAME,

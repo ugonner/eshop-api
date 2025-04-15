@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsEmail, IsEnum, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Gender } from "../enums/user.enum";
 import { AuthDTO } from "./auth.dto";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
@@ -6,6 +6,18 @@ import { Type } from "class-transformer";
 import { DeliveryAddressDTO } from "./order.dto";
 import { QueryRequestDTO } from "./query-request.dto";
 
+
+export class QuickRegisterDTO {
+    @ApiProperty()
+    @IsEmail()
+    email: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    password?: string;
+
+}
 export class UserProfileDTO extends AuthDTO{
     
 

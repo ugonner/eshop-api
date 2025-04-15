@@ -12,6 +12,7 @@ import { ProductService } from '../product/product.service';
 import { IShippingMethodDetail, ShippingMethods } from '../shared/DATASETS/shipping/shippingMethods';
 import { OrderShippingMethodType } from '../shared/enums/order.enum';
 import { promises } from 'dns';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class OrderService {

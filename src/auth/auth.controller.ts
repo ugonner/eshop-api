@@ -15,18 +15,19 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UserProfileDTO } from '../shared/dtos/user.dto';
+import { QuickRegisterDTO, UserProfileDTO } from '../shared/dtos/user.dto';
 import { ApiResponse } from '../shared/helpers/apiresponse';
 import { AuthDTO, OtpAuthDTO, QueryAuthDTO, RoleDTO } from '../shared/dtos/auth.dto';
 import { ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
 import { AllExceptionFilter } from '../shared/interceptors/all-exceptions.filter';
 import { JwtGuard } from '../shared/guards/jwt.guards';
+import { MailService } from '../mail/mail.service';
 
 @ApiTags("Auth")
 @UseFilters(AllExceptionFilter)
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService, private mailService: MailService) {}
 
   // TODO: add permission guard to this route
   @ApiCreatedResponse()
@@ -39,6 +40,32 @@ export class AuthController {
       ipAddress: req.ip,
     };
     const res = await this.authService.login(payload, tokenData)
+    return ApiResponse.success('User Account Created Successfully', res);
+  }
+  // TODO: add permission guard to this route
+  @ApiCreatedResponse()
+  @HttpCode(HttpStatus.CREATED)
+  @Post('/register/auto')
+  async quickRegister(@Body() payload: QuickRegisterDTO, @Req() req) {
+    const tokenData = {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+    };
+    payload.password = payload.password ? payload.password : payload.email.split("@")[0];
+    
+    await this.authService.createAccount(payload as AuthDTO);
+    const res = await this.authService.login(payload as AuthDTO, tokenData)
+    this.mailService.sendEmail({
+      to: payload.email,
+      subject: `New Account Detail`,
+      template: "./generals/general.hbs",
+      context: {
+        name: payload.email,
+        entries: {
+          password: payload.password
+        }
+      }
+    });
     return ApiResponse.success('User Account Created Successfully', res);
   }
 

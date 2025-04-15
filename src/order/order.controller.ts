@@ -7,11 +7,13 @@ import { ApiResponse } from '../shared/helpers/apiresponse';
 import { JwtGuard } from '../shared/guards/jwt.guards';
 import { AuthService } from '../auth/auth.service';
 import { UserProfileDTO } from '../shared/dtos/user.dto';
+import { MailService } from '../mail/mail.service';
 
 @ApiTags("Order")
 @Controller('order')
 export class OrderController {
-  constructor(private readonly orderService: OrderService, private authService: AuthService) {}
+  constructor(private readonly orderService: OrderService, private authService: AuthService, 
+    private mailService: MailService) {}
 
   @Post()
   @UseGuards(JwtGuard)
@@ -19,8 +21,29 @@ export class OrderController {
     @User("userId") userId: string,
     @Body() payload: OrderDTO) {
     const res = await this.orderService.createOrder(userId, payload);
+    this.mailService.sendEmail({
+      to: res.user?.email,
+      subject: "Order Created",
+      context: {
+        name: res.user?.firstName || res.user?.email,
+        message: "An order has been created for you, login to check your orders and the invoice to monitor status",
+        entries: {}
+      }
+    }).catch((err) => console.log("Error sending mail", err.message))
+    
+    this.mailService.sendEmail({
+      to: process.env.APP_EMAIL,
+      subject: "Order Created",
+      context: {
+        name: res.user?.firstName || res.user?.email,
+        message: "An order has been created, login to dashboard to view order and invoice to track detail",
+        entries: {}
+      }
+    }).catch((err) => console.log("Error sending mail", err.message))
+    
     return ApiResponse.success("Order created successfully", res);
   }
+  
   @Post("order-profile")
   async createOrderWithOrderProfile(
     @Body() payload: OrderWithOrderProfileDTO) {

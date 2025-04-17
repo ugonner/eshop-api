@@ -50,6 +50,10 @@ export class ProductVariantDTO {
     
     @ApiProperty()
     @IsNumber()
+    costPrice: number;
+
+    @ApiProperty()
+    @IsNumber()
     price: number;
 
     @ApiProperty()

@@ -90,13 +90,11 @@ export class AuthService {
       );
       
       await this.notificationService.sendEmail([auth.email], {
+        to: auth.email,
         subject: 'Account Creation Activation',
-        template: {
-          templatePath: '',
-          content: {
+        receiverName: firstName,
+        entries: {
             otp: payload.otp,
-            name: firstName,
-          },
         },
       });
       
@@ -179,23 +177,23 @@ export class AuthService {
     dto: OtpAuthDTO,
     values: { userAgent: string; ipAddress: string },
   ) {
-    const auth = await this.authRepository.findOneBy({ email: dto.email });
+    const auth = await this.authRepository.findOneBy({ email: dto.email?.toLowerCase() });
     if (!auth)
       throw new NotFoundException(
         'No account found, you can re-register again',
       );
-    if (auth.isVerified)
-      throw new BadRequestException('aCCOUNT ALREADY verified, sign in');
-
-    const otpExpireTime = new Date(auth.otpTime).getTime() + 10 * 60 * 1000;
-    if (otpExpireTime < Date.now()) {
+    
+    const otpExpireTime = new Date(auth.otpTime).getTime() + 30 * 60 * 1000;
+    if (otpExpireTime < new Date().getTime()) {
       throw new ForbiddenException('Verification code has expired');
     }
+    
     await this.authRepository.update(
-      { email: auth.email },
-      { isVerified: true, otp: undefined },
+      { email: auth.email?.toLowerCase() },
+      { isVerified: true, otp: null },
     );
     this.notificationService.sendEmail([auth.email], {
+      to: auth.email,
       subject: 'Account Verified',
       message: 'Your Account has been verified succesfully, Go ahead and login',
     });
@@ -206,26 +204,25 @@ export class AuthService {
   }
 
   //resend verification token
-  async resendOtp(payload: OtpAuthDTO): Promise<OtpAuthDTO> {
+  async sendOtp(payload: OtpAuthDTO): Promise<OtpAuthDTO> {
     try {
       const auth = await this.authRepository.findOne({
-        where: { email: payload.email },
+        where: { email: payload.email?.toLowerCase() },
         relations: ['profile'],
       });
       if (!auth) {
         throw new NotFoundException('Account not found');
       }
-      if (auth.isVerified) {
-        throw new BadRequestException('Account has already been verified');
-      }
       const otp = Number(Math.random().toString().substr(2, 6));
       await this.authRepository.update(
-        { email: payload.email },
+        { email: payload.email?.toLowerCase() },
         { otp, otpTime: new Date() },
       );
       this.notificationService.sendEmail([auth.email], {
-        subject: 'Verify Your Account',
-        message: `${auth.profile.firstName} verify your account with ${otp}`,
+        to: auth.email,
+        subject: 'Your Secure Security Code',
+        message: `Use this Security Code to Complete Your Action`,
+        entries: {otp}
       });
       return { email: payload.email, otp };
     } catch (error) {
@@ -236,39 +233,9 @@ export class AuthService {
     }
   }
 
-  //reset password link
-  async requestResetPassword(payload: OtpAuthDTO): Promise<OtpAuthDTO> {
-    const auth = await this.authRepository.findOne({
-      where: { email: payload.email },
-      relations: ['profile'],
-    });
-    if (!auth) {
-      throw new NotFoundException('Account not found');
-    }
-    if (!auth.isVerified) {
-      throw new BadRequestException(
-        'Account is not verified, kindly verify your account to proceed',
-      );
-    }
-
-    const otp = Number(Math.random().toString().substr(2, 6));
-    await this.authRepository.update(
-      { email: payload.email },
-      { otp, otpTime: new Date() },
-    );
-    await this.notificationService.sendEmail([payload.email], {
-      subject: 'Reset Password',
-      message: `Use ${otp} to reset your password`,
-    });
-    return {
-      email: payload.email,
-      otp,
-    };
-  }
-
   //reset password
   async resetPassword(payload: OtpAuthDTO) {
-    const auth = await this.authRepository.findOneBy({ email: payload.email });
+    const auth = await this.authRepository.findOneBy({ email: payload.email?.toLowerCase() });
     if (!auth) {
       throw new NotFoundException('Account not found or invalid token');
     }
@@ -278,7 +245,7 @@ export class AuthService {
 
     if (payload.otp !== auth.otp) throw new BadRequestException('Invalid OTP');
 
-    const otpExpireTime = new Date(auth.otpTime).getTime() + 10 * 60 * 1000;
+    const otpExpireTime = new Date(auth.otpTime).getTime() + 30 * 60 * 1000;
 
     if (otpExpireTime < new Date().getTime()) {
       throw new UnauthorizedException('Verification code has expired');
@@ -289,8 +256,10 @@ export class AuthService {
       { password, otp: null },
     );
     this.notificationService.sendEmail([payload.email], {
+      to: payload.email,
       subject: 'Password reset successful',
       message: 'Your password was reset successfully',
+      
     });
     return 'Password reset done';
   }

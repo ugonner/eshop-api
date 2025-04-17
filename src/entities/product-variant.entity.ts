@@ -24,6 +24,9 @@ export class ProductVariant {
   isDeleted: boolean;
   
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00 })
+  costPrice: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00 })
   price: number;
 
   @Column({ type: 'int', default: 0 })

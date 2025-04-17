@@ -18,15 +18,13 @@ import { QueryRequestDTO } from './query-request.dto';
     email: string;
 
     @ApiPropertyOptional()
-    @Length(11, 16)
-    @IsPhoneNumber()
+    @IsString()
     @IsOptional()
     phoneNumber?: string;
   
   
     @ApiProperty()
-    @Length(8, 20, { message: 'Password must be between 8 and 20 characters' })
-    @IsNotEmpty({ message: 'Please enter a password' })
+    @IsString()
     password: string;
   
   }

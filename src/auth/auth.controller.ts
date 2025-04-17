@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -22,12 +23,13 @@ import { ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
 import { AllExceptionFilter } from '../shared/interceptors/all-exceptions.filter';
 import { JwtGuard } from '../shared/guards/jwt.guards';
 import { MailService } from '../mail/mail.service';
+import { NotificationService } from '../notifiction/notification.service';
 
 @ApiTags("Auth")
 @UseFilters(AllExceptionFilter)
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService, private mailService: MailService) {}
+  constructor(private readonly authService: AuthService, private notificationService: NotificationService) {}
 
   // TODO: add permission guard to this route
   @ApiCreatedResponse()
@@ -51,21 +53,29 @@ export class AuthController {
       userAgent: req.headers['user-agent'],
       ipAddress: req.ip,
     };
+    if(!payload) throw new BadRequestException("No data filled");
+    
     payload.password = payload.password ? payload.password : payload.email.split("@")[0];
     
     await this.authService.createAccount(payload as AuthDTO);
+    console.log("payload", payload);
+    
     const res = await this.authService.login(payload as AuthDTO, tokenData)
-    this.mailService.sendEmail({
+    
+    console.log("user res", res);
+    
+    this.notificationService.sendEmail([payload.email], {
       to: payload.email,
       subject: `New Account Detail`,
       template: "./generals/general.hbs",
-      context: {
-        name: payload.email,
+      receiverName: payload.email,
+        message: "Your account has been created successfully,",
         entries: {
           password: payload.password
         }
-      }
-    });
+      
+    }).catch((err) => console.log("Error sending new account email", err.message))
+    
     return ApiResponse.success('User Account Created Successfully', res);
   }
 
@@ -87,7 +97,7 @@ export class AuthController {
     return ApiResponse.success('Login successful', user);
   }
 
-  @Post('/verify')
+  @Post('/verify-account')
   @HttpCode(HttpStatus.OK)
   async verifyAccount(
     @Body() payload: OtpAuthDTO,
@@ -108,30 +118,16 @@ export class AuthController {
     return ApiResponse.success('Verification successsful', user);
   }
 
-  @Post('/forgot-password')
-  @HttpCode(HttpStatus.OK)
-  async forgotPassword(@Body() payload: OtpAuthDTO) {
-    const user = await this.authService.requestResetPassword(payload);
-    return ApiResponse.success('Forgot Password Link Sent', user);
-  }
-
-  @Post('/request-reset-password')
-  @HttpCode(HttpStatus.OK)
-  async requestResetPassword(@Body() payload: OtpAuthDTO) {
-    const user = await this.authService.requestResetPassword(payload);
-    return ApiResponse.success('Forgot Password Link Sent', user);
-  }
-
   @Post('/reset-password')
   async resetPassword(@Body() payload: OtpAuthDTO) {
     const user = await this.authService.resetPassword(payload);
     return ApiResponse.success('Password Reset Successfull', user);
   }
 
-  @Post('/resend-otp')
+  @Post('/request-otp')
   @HttpCode(HttpStatus.OK)
   async resendOtp(@Body() payload: OtpAuthDTO) {
-    const user = await this.authService.resendOtp(payload);
+    const user = await this.authService.sendOtp(payload);
     return ApiResponse.success('Successfully sent verification code', user);
   }
 

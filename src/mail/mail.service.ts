@@ -11,6 +11,10 @@ export class MailService {
   ) {
     try {
       const {to, subject, context, template} = dto;
+      if(context.entries){
+        context.entriesData = Object.entries(context.entries)
+      };
+      
       await this.mailerService.sendMail({
         to,
         subject,

@@ -13,29 +13,17 @@ export class NotificationService {
         (new Logger("sendEmailWithIds")).log(userIds, dto)    
     }
     
-    async sendEmail(emails: string[], dto: MailDTO){
-        (new Logger("SendMail").log(emails, dto))
-        const {subject, receiverName, message, entries, template} = dto;
+    async sendEmail(dto: MailDTO){
 
-        Promise.allSettled(
-            emails.map((email) => 
-                this.mailService.sendEmail({
-                    to: email,
-                    subject,
-                    template: template ? template : "./generals/general.hbs",
-                    context: {
-                      name: receiverName || email,
-                      message,
-                      entries
-                    }
-                  })
-            )
-        ).then((res) => {
-            res.forEach((resValue) => {
-                if(resValue.status === "rejected") console.log(`Error sending email: ${dto.message}`, resValue.reason);
-                else console.log(`${dto.message.substring(0, 40)} email sent successfully`)
-                })
-        })
+        const {to, subject, context, template} = dto;
+
+        this.mailService.sendEmail({
+            to,
+            subject,
+            template: template ? template : "./generals/general.hbs",
+            context
+          })
+          .catch((err) => console.error(`Error sending email on ${context?.message}`, err.message))
           
     }
 }

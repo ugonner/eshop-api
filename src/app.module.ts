@@ -45,6 +45,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
           user: process.env.NODEMAILER_USER,
           pass: process.env.NODEMAILER_PASS
         },
+        tls: {
+          rejectUnauthorized: false, // May help bypass certificate issues
+        }
       },
       defaults: {
         from: `${process.env.NODEMAILER_USERNAME} <${process.env.NODEMAILER_USER}>`, // Default sender

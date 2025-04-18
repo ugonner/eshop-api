@@ -31,7 +31,8 @@ export class OrderService {
     orderItem.productVariant = variant;
     orderItem.price = variant.price;
     orderItem.quantity = item.quantity;
-    orderItem.totalAmount = variant.price * item.quantity;
+    orderItem.totalAmount = Number(variant.price) * Number(item.quantity);
+    orderItem.totalCostAmount = Number(variant.costPrice) * Number(item.quantity);
     return orderItem;
     //return await queryRunner.manager.save(OrderItem, orderItem);
   }
@@ -47,7 +48,8 @@ export class OrderService {
       orderItem.productVariant = variant;
       orderItem.price = variant.price;
       orderItem.quantity = item.quantity;
-      orderItem.totalAmount = variant.price * item.quantity;
+      orderItem.totalAmount = Number(variant.price) * Number(item.quantity);
+      orderItem.totalCostAmount = Number(variant.costPrice) * Number(item.quantity);
       orderItems.push(orderItem);    
     })
     return orderItems;
@@ -79,6 +81,9 @@ export class OrderService {
     order.user = user;
     order.totalAmount = orderItems.reduce((acc, item) => {
       return acc + (item.quantity * item.productVariant?.price)
+    }, 0);
+    order.totalCostAmount = orderItems.reduce((acc, item) => {
+      return acc + (Number(item.quantity) * Number(item.productVariant?.costPrice))
     }, 0);
     order.orderItems = orderItems;
 

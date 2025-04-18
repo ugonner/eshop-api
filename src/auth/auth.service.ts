@@ -89,13 +89,15 @@ export class AuthService {
         profile,
       );
       
-      await this.notificationService.sendEmail([auth.email], {
-        to: auth.email,
+      await this.notificationService.sendEmail({
+        to: [auth.email],
         subject: 'Account Creation Activation',
-        receiverName: firstName,
+        context: {
+          receiverName: firstName,
         entries: {
             otp: payload.otp,
         },
+        }
       });
       
       await queryRunner.commitTransaction();
@@ -192,10 +194,12 @@ export class AuthService {
       { email: auth.email?.toLowerCase() },
       { isVerified: true, otp: null },
     );
-    this.notificationService.sendEmail([auth.email], {
-      to: auth.email,
+    this.notificationService.sendEmail({
+      to: [auth.email],
       subject: 'Account Verified',
-      message: 'Your Account has been verified succesfully, Go ahead and login',
+      context: {
+        message: 'Your Account has been verified succesfully, Go ahead and login',
+      }
     });
     const { accessToken, refreshToken } =
       await this.generateRefreshAndAccessToken(auth.toAuthData(), values);
@@ -218,11 +222,13 @@ export class AuthService {
         { email: payload.email?.toLowerCase() },
         { otp, otpTime: new Date() },
       );
-      this.notificationService.sendEmail([auth.email], {
-        to: auth.email,
+      this.notificationService.sendEmail({
+        to: [auth.email],
         subject: 'Your Secure Security Code',
-        message: `Use this Security Code to Complete Your Action`,
+        context: {
+          message: `Use this Security Code to Complete Your Action`,
         entries: {otp}
+        }
       });
       return { email: payload.email, otp };
     } catch (error) {
@@ -255,10 +261,12 @@ export class AuthService {
       { otp: auth.otp },
       { password, otp: null },
     );
-    this.notificationService.sendEmail([payload.email], {
-      to: payload.email,
+    this.notificationService.sendEmail({
+      to: [payload.email],
       subject: 'Password reset successful',
-      message: 'Your password was reset successfully',
+      context: {
+        message: 'Your password was reset successfully',
+      }
       
     });
     return 'Password reset done';

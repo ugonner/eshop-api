@@ -1,26 +1,32 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { MailDTO } from '../shared/dtos/mail.dto';
+import { MailjetService } from './mailjet.service';
 
 @Injectable()
 export class MailService {
-    constructor(private readonly mailerService: MailerService) {}
+    constructor(private readonly mailerService: MailerService,
+
+      private mailjetService: MailjetService
+    ) {}
 
   async sendEmail(
     dto: MailDTO
   ) {
     try {
-      const {to, subject, context, template} = dto;
-      if(context.entries){
-        context.entriesData = Object.entries(context.entries)
-      };
+
+      await this.mailjetService.sendEmail(dto);
+      // const {to, subject, context, template} = dto;
+      // if(context.entries){
+      //   context.entriesData = Object.entries(context.entries)
+      // };
       
-      await this.mailerService.sendMail({
-        to,
-        subject,
-        template, // e.g., './welcome' -> './templates/welcome.hbs'
-        context, // Data to be injected into the template
-      });
+      // await this.mailerService.sendMail({
+      //   to,
+      //   subject,
+      //   template, // e.g., './welcome' -> './templates/welcome.hbs'
+      //   context, // Data to be injected into the template
+      // });
       console.log('Email sent successfully!');
     } catch (error) {
       console.error('Error sending email:', error);

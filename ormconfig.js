@@ -1,5 +1,6 @@
 
 const dotenv = require("dotenv");
+const path = require("path");
 const { DataSource } = require("typeorm");
 dotenv.config();
 
@@ -13,12 +14,12 @@ const typeOrmConfig = {
     database: process.env.DATABASE_NAME,
     autoLoadEntities: true,
     entities: ["dist/**/*.entity.js"],
-    migrations: ["src/migrations/**/*.js"],
-    migrationsDir: "src/migrations",
+    migrations: ["dist/migrations/**/*.js"],
+    //migrationsDir: "src/migrations",
     //"subscribers": ["dist/subscribesr/**/*.js"],
     cli: {
-      entitiesDir: "src/entities",
-      migrationsDir: "dist/migrations",
+      entitiesDir: path.join(__dirname, "dist/entities"),
+      migrationsDir: path.join(__dirname, "dist/migrations"),
       //"subscribersDir": "src/subscriber"
     },
 };

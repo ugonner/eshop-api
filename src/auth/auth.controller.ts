@@ -64,15 +64,17 @@ export class AuthController {
     
     console.log("user res", res);
     
-    this.notificationService.sendEmail([payload.email], {
-      to: payload.email,
+    this.notificationService.sendEmail({
+      to: [payload.email],
       subject: `New Account Detail`,
       template: "./generals/general.hbs",
-      receiverName: payload.email,
+      context: {
+         receiverName: payload.email,
         message: "Your account has been created successfully,",
         entries: {
           password: payload.password
         }
+      }
       
     }).catch((err) => console.log("Error sending new account email", err.message))
     

@@ -12,13 +12,14 @@ import { Profile } from '../entities/user.entity';
 import { IQueryResult } from '../shared/interfaces/api-response.interface';
 import { MailService } from '../mail/mail.service';
 import { MailDTO } from '../shared/dtos/mail.dto';
+import { NotificationService } from '../notifiction/notification.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectDataSource()
     private dataSource: DataSource,
-    private mailerService: MailService,
+    private notificationService: NotificationService,
   ) {}
 
   async updateUser(userId: string, dto: UpdateProfileDTO): Promise<Profile> {
@@ -139,15 +140,19 @@ export class UserService {
     const { subject, message, ...queryDto } = dto;
 
     const users = await this.getAllUsersFiltered(queryDto, userId);
-    const mailDto: Partial<MailDTO> = {
+    const mailDto: MailDTO = {
       subject,
+      to: users.map((user) => user.email),
+      context: {
+        message
+      }
     };
 
-    Promise.allSettled(
-      users.map((user) =>
-        this.mailerService.sendEmail({ to: user.email, subject }),
-      ),
-    );
+    this.notificationService.sendEmail(
+      mailDto
+    )
+
+    
     return true;
   }
 
